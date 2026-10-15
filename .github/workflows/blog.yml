@@ -1,0 +1,44 @@
+# Blog bot: every 15 minutes, handle Telegram taps; on Mondays from 09:00 Dublin, send the week's previews.
+# To pause: GitHub → Actions → "Blog bot" → ⋯ → Disable workflow.
+name: Blog bot
+# This public copy only runs when started by hand. To run it for real, add the secrets listed in the
+# README and uncomment the schedule.
+on:
+  # schedule:
+  #   - cron: "*/15 * * * *"
+  workflow_dispatch:
+concurrency: blogbot
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: malavnaik99/malavnaik99.github.io
+          token: ${{ secrets.BLOG_REPO_TOKEN }}
+          path: site
+      - run: |
+          pip install -q pyyaml pynacl
+          for d in . site; do
+            git -C $d config user.name "github-actions[bot]"
+            git -C $d config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          done
+      - run: python -m unittest blog/test_blogbot.py
+      - env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.BLOG_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_CLIENT_ID: ${{ vars.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET: ${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          BLOG_REPO_TOKEN: ${{ secrets.BLOG_REPO_TOKEN }}  # also saves the renewed LinkedIn login as a secret
+          COMMIT: "1"
+        run: python blog/blogbot.py
+      - if: always()
+        run: |
+          git add blog/bot_state.json
+          git diff --cached --quiet || { git commit -qm "blog bot: update Telegram state"; git push -q; }
