@@ -22,7 +22,7 @@ jobs:
           token: ${{ secrets.BLOG_REPO_TOKEN }}
           path: site
       - run: |
-          pip install -q pyyaml pynacl
+          pip install -q pyyaml pynacl pillow
           for d in . site; do
             git -C $d config user.name "github-actions[bot]"
             git -C $d config user.email "41898282+github-actions[bot]@users.noreply.github.com"

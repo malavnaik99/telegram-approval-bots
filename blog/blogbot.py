@@ -77,7 +77,19 @@ def to_site_markdown(text):
     _, fm, body = text.split("---\n", 2)
     fm = re.sub(r'^(image: "?)images/', r"\1/images/", fm, flags=re.M)
     body = re.sub(r"^# .*\n\n?", "", body, count=1, flags=re.M).replace("](../images/", "](/images/")
+    body = re.sub(r"(!\[[^\]]*\]\(/images/([^)]+)\))", with_size, body)
     return f"---\n{fm}---\n{body}"
+
+
+def with_size(m):
+    """Add the photo's width and height (kramdown attributes) so the page doesn't jump while it loads."""
+    path = os.path.join(BLOG_DIR, "images", m.group(2))
+    if not os.path.exists(path):
+        return m.group(1)
+    from PIL import Image
+    with Image.open(path) as im:
+        w, h = im.size
+    return f'{m.group(1)}{{: width="{w}" height="{h}"}}'
 
 
 def plain_body(body):
@@ -272,6 +284,32 @@ def publish(path, say):
     if all(meta.get(done[p]) for p in platforms) and meta.get("status") != "published":
         record(path, "status", "published")
     say(status_table(load_posts()))
+    update_lab(load_posts(), meta)
+
+
+def lab_summary(posts, latest):
+    """Public numbers for the site's Automation Lab box. Built only from public front matter: no IDs or secrets."""
+    live = [m for _, m, _ in posts if m.get("blog_url")]
+    return {
+        "posts_published": len(live),
+        "posts_queued": sum(1 for _, m, _ in posts if not m.get("blog_url")),
+        "platforms": {label: sum(1 for m in live if m.get(field)) for _, label, field in TABLE},
+        "last_post": {"title": latest["title"], "url": latest["canonical_url"]},
+        "updated": datetime.datetime.now(DUBLIN).date().isoformat(),
+    }
+
+
+def update_lab(posts, latest):
+    path = os.path.join(SITE, "_data", "automation.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(lab_summary(posts, latest), f, indent=1, ensure_ascii=False)
+    if os.environ.get("COMMIT") == "1":
+        git(SITE, "add", "_data/automation.json")
+        if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=SITE).returncode:
+            git(SITE, "commit", "-qm", "Automation Lab: update numbers")
+            git(SITE, "pull", "-q", "--rebase")
+            git(SITE, "push", "-q")
 
 
 TABLE = [("blog", "Blog", "blog_url"), ("devto", "DEV", "devto_url"),

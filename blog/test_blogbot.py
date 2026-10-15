@@ -44,6 +44,16 @@ class Tests(unittest.TestCase):
         self.assertIn('title: "Hello"', out)
         self.assertTrue(out.startswith("---\nid: 7\n"))
 
+    def test_site_markdown_adds_photo_size(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, d)
+        os.makedirs(os.path.join(d, "images"))
+        from PIL import Image
+        Image.new("RGB", (30, 40)).save(os.path.join(d, "images", "a.jpg"))
+        with mock.patch.object(blogbot, "BLOG_DIR", d):
+            out = blogbot.to_site_markdown(POST)
+        self.assertIn('![alt](/images/a.jpg){: width="30" height="40"}', out)
+
     def test_set_field_adds_and_replaces(self):
         d = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, d)
@@ -56,6 +66,9 @@ class Tests(unittest.TestCase):
         self.assertIn("Body text.", body)
 
     def test_publish_skips_platforms_already_done(self):
+        lab = mock.patch.object(blogbot, "update_lab")
+        lab.start()
+        self.addCleanup(lab.stop)
         d = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, d)
         path = os.path.join(d, "p.md")
@@ -104,6 +117,15 @@ class Tests(unittest.TestCase):
                 mock.patch.object(blogbot.shutil, "copytree"), mock.patch.object(blogbot.urllib.request, "urlopen"):
             blogbot.publish_blog(path, blogbot.read_post(path)[0])
         self.assertEqual(calls, ["add", "commit", "pull", "push"])
+
+    def test_lab_summary_counts_and_holds_no_ids(self):
+        posts = [post(1, title="One", canonical_url="https://x/1/", blog_url="b", linkedin_urn="urn:li:share:9"),
+                 post(3, title="Three", canonical_url="https://x/3/", blog_url="b", devto_url="d"), post(4, title="Four")]
+        s = blogbot.lab_summary(posts, posts[1][1])
+        self.assertEqual((s["posts_published"], s["posts_queued"]), (2, 1))
+        self.assertEqual(s["platforms"], {"Blog": 2, "DEV": 1, "LinkedIn": 1, "Medium": 0})
+        self.assertEqual(s["last_post"], {"title": "Three", "url": "https://x/3/"})
+        self.assertNotIn("urn:li", blogbot.json.dumps(s))
 
     def test_status_table_lists_only_started_posts_and_their_platforms(self):
         posts = [post(1, title="One: x", blog_url="b", linkedin_urn="u", medium_done=True,

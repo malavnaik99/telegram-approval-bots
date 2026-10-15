@@ -29,7 +29,7 @@ status: published   (a re-run skips every platform that's already done, so nothi
 
 - **Safety:** taps from any chat other than the owner's are ignored. Posts with a `verify` (facts to check) or `pitch` field are never published. A failure on one platform is reported on Telegram in plain words, and the others carry on.
 - **LinkedIn login renewal:** the owner logs in through a small callback page on the blog and sends the code to the bot. The bot swaps it for a token and stores it as a GitHub Actions secret. A reminder goes out a week before it expires.
-- **Status table:** after each post, the bot sends a table of where every post is (✅ / ⏳).
+- **Status table:** after each post, the bot sends a table of where every post is (✅ / ⏳), and writes public counts to the site (`_data/automation.json`) for a live "Automation Lab" box.
 
 ### Setup (GitHub Actions secrets)
 `BLOG_TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `DEVTO_API_KEY`, `BLOG_REPO_TOKEN` (fine-grained token: Contents read/write on the Pages repo, Secrets read/write on this repo), `LINKEDIN_CLIENT_SECRET`, and the repository variable `LINKEDIN_CLIENT_ID`. Change the Pages repo name in `.github/workflows/blog.yml` and `BLOG` in `blog/blogbot.py`, then uncomment the schedule.
@@ -46,7 +46,7 @@ Setup: copy `.env.example` to `.env`, add Google OAuth `credentials.json` (Gmail
 ## Tests
 
 ```bash
-pip install -r requirements.txt pyyaml
+pip install -r requirements.txt pyyaml pillow
 python -m unittest test_autoreply            # Gmail bot
 python -m unittest discover -s blog          # blog publisher: post selection, site transform, never-twice, LinkedIn text, reminders
 ```
