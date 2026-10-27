@@ -129,6 +129,22 @@ class Tests(unittest.TestCase):
             blogbot.publish_blog(path, blogbot.read_post(path)[0])
         self.assertEqual(calls, ["add", "commit", "pull", "push"])
 
+    def test_publish_blog_copies_new_images_but_never_overwrites(self):
+        bot, site = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bot); self.addCleanup(shutil.rmtree, site)
+        os.makedirs(os.path.join(bot, "images", "sub")); os.makedirs(os.path.join(site, "images"))
+        for rel, data in (("old.jpg", "bot original"), ("new.jpg", "new photo"), ("sub/b.png", "nested")):
+            open(os.path.join(bot, "images", rel), "w").write(data)
+        open(os.path.join(site, "images", "old.jpg"), "w").write("compressed on the site")
+        path = os.path.join(bot, "p.md")
+        open(path, "w").write(POST)
+        with mock.patch.object(blogbot, "SITE", site), mock.patch.object(blogbot, "BLOG_DIR", bot), \
+                mock.patch.object(blogbot, "git", lambda cwd, *a: None), mock.patch.object(blogbot.urllib.request, "urlopen"):
+            blogbot.publish_blog(path, blogbot.read_post(path)[0])
+        read = lambda rel: open(os.path.join(site, "images", rel)).read()
+        self.assertEqual(read("old.jpg"), "compressed on the site")
+        self.assertEqual((read("new.jpg"), read("sub/b.png")), ("new photo", "nested"))
+
     def test_lab_summary_counts_and_holds_no_ids(self):
         posts = [post(1, title="One", canonical_url="https://x/1/", blog_url="b", linkedin_urn="urn:li:share:9"),
                  post(3, title="Three", canonical_url="https://x/3/", blog_url="b", devto_url="d"), post(4, title="Four")]
