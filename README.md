@@ -19,7 +19,7 @@ Telegram preview  [✅ Post] [❌ Skip]
       │  ✅  (only from the owner's chat)
       ▼
 1. Blog: write _posts/DATE-slug.md to the Pages repo, push, wait for HTTP 200
-2. DEV: Forem API, canonical_url → blog, main_image → blog photo
+2. DEV: Forem API, canonical_url → the post on malavnaik.com (built from the slug, never typed by hand), main_image → blog photo
 3. LinkedIn: Posts API with the photo, an intro and the blog link
 4. Medium: no API, so a Telegram message with the import steps
       │  each result is written into the post's front matter and committed at once

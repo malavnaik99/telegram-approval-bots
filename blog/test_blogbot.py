@@ -36,6 +36,17 @@ class Tests(unittest.TestCase):
                  post(5), post(6), post(7)]
         self.assertEqual([m["id"] for _, m, _ in blogbot.next_posts(posts)], [5, 6])
 
+    def test_devto_canonical_is_the_blog_post_whatever_front_matter_says(self):
+        path = os.path.join(tempfile.mkdtemp(), "7.md")
+        open(path, "w").write(POST)  # front matter still has the old github.io canonical
+        meta, body = blogbot.read_post(path)
+        with mock.patch.dict(os.environ, {"DEVTO_API_KEY": "k"}), \
+                mock.patch.object(blogbot, "http", return_value=(200, {"url": "https://dev.to/x"})) as http:
+            blogbot.publish_devto(meta, body)
+        article = http.call_args[0][1]["article"]
+        self.assertEqual(article["canonical_url"], "https://malavnaik.com/blog/hello/")
+        self.assertEqual(article["main_image"], "https://malavnaik.com/images/a.jpg")
+
     def test_site_markdown(self):
         out = blogbot.to_site_markdown(POST)
         self.assertIn('image: "/images/a.jpg"', out)
