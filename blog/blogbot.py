@@ -121,7 +121,9 @@ def publish_blog(path, meta):
         os.makedirs(os.path.join(SITE, "_posts"), exist_ok=True)
         with open(os.path.join(SITE, "_posts", f"{day}-{slug}.md"), "w", encoding="utf-8") as f:
             f.write(to_site_markdown(open(path, encoding="utf-8").read()))
-        shutil.copytree(os.path.join(BLOG_DIR, "images"), os.path.join(SITE, "images"), dirs_exist_ok=True)
+        # Never overwrite: the site's copies may have been compressed or edited since the bot first published them.
+        shutil.copytree(os.path.join(BLOG_DIR, "images"), os.path.join(SITE, "images"), dirs_exist_ok=True,
+                        copy_function=lambda src, dst: os.path.exists(dst) or shutil.copy2(src, dst))
         git(SITE, "add", "-A")
         git(SITE, "commit", "-qm", f"Publish: {meta['title']}")
         git(SITE, "pull", "-q", "--rebase")  # the site also gets edits from Claude Code; never push over them
