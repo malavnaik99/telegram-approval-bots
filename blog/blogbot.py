@@ -28,7 +28,7 @@ BLOG_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(BLOG_DIR)
 STATE_FILE = os.path.join(BLOG_DIR, "bot_state.json")
 SITE = os.environ.get("SITE_DIR", os.path.join(REPO, "site"))  # checkout of malavnaik99.github.io
-BLOG = "https://malavnaik99.github.io"
+BLOG = "https://malavnaik.com"
 DUBLIN = ZoneInfo("Europe/Dublin")
 PER_WEEK = 2
 NAMES = {"blog": "your blog", "devto": "DEV", "linkedin": "LinkedIn", "medium": "Medium (you import it)"}
@@ -39,7 +39,10 @@ NAMES = {"blog": "your blog", "devto": "DEV", "linkedin": "LinkedIn", "medium": 
 def read_post(path):
     text = open(path, encoding="utf-8").read()
     _, fm, body = text.split("---\n", 2)
-    return yaml.safe_load(fm), body
+    meta = yaml.safe_load(fm)
+    if "slug" in meta:  # the site's permalink is /blog/:slug/, so DEV and LinkedIn always point at the original
+        meta["canonical_url"] = f"{BLOG}/blog/{meta['slug']}/"
+    return meta, body
 
 
 def load_posts():
@@ -147,7 +150,7 @@ def publish_devto(meta, body):
 
 
 LINKEDIN_CLIENT_ID = os.environ.get("LINKEDIN_CLIENT_ID", "")
-LINKEDIN_REDIRECT = f"{BLOG}/linkedin-callback/"
+LINKEDIN_REDIRECT = "https://malavnaik99.github.io/linkedin-callback/"  # must match the LinkedIn app exactly
 LINKEDIN_API = {"Linkedin-Version": "202607", "X-Restli-Protocol-Version": "2.0.0"}
 
 

@@ -8,7 +8,6 @@ tags: [example]
 image: "images/example.jpg"
 image_alt: "Example image"
 platforms: [blog, devto, linkedin, medium]
-canonical_url: "https://example.github.io/blog/example-post/"
 status: draft
 linkedin_intro: "A short intro the bot posts on LinkedIn with a link to the blog."
 ---
